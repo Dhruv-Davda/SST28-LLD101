@@ -13,11 +13,9 @@ public class Main {
     }
 
     private static String safe(Exporter e, ExportRequest r) {
-        try {
-            ExportResult out = e.export(r);
-            return "OK bytes=" + out.bytes.length;
-        } catch (RuntimeException ex) {
-            return "ERROR: " + ex.getMessage();
-        }
+        ExportResult out = e.export(r);
+        String content = new String(out.bytes);
+        if (content.startsWith("ERROR: ")) return content;
+        return "OK bytes=" + out.bytes.length;
     }
 }
