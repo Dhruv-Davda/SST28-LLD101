@@ -1,5 +1,5 @@
 # Java
-*.class
+# *.class
 
 # OS / IDE
 .DS_Store
