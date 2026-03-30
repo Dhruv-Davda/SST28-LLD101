@@ -14,6 +14,11 @@ public class ElevatorController {
         this.selectionStrategy = selectionStrategy;
     }
 
+    public void setStrategy(ElevatorSelectionStrategy strategy) {
+        this.selectionStrategy = strategy;
+        System.out.println("Strategy changed to: " + strategy.getClass().getSimpleName());
+    }
+
     public void addElevator(Elevator elevator) {
         elevators.add(elevator);
     }

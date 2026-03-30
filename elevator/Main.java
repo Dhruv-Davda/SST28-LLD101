@@ -2,8 +2,10 @@ package elevator;
 
 public class Main {
     public static void main(String[] args) {
-        ElevatorSelectionStrategy strategy = new NearestElevatorStrategy();
-        ElevatorController controller = new ElevatorController(strategy);
+        ElevatorSelectionStrategy nearest = new NearestElevatorStrategy();
+        ElevatorSelectionStrategy fcfs = new FCFSStrategy();
+
+        ElevatorController controller = new ElevatorController(nearest);
 
         controller.addFloor(new Floor(0));
         controller.addFloor(new Floor(1));
@@ -17,27 +19,28 @@ public class Main {
 
         controller.showAllStatus();
 
+        System.out.println("========== USING NEAREST ELEVATOR STRATEGY ==========");
+
         controller.requestFromOutside(3, Direction.UP);
-
         controller.requestFromInside("E1", 5);
-
         controller.requestFromOutside(0, Direction.UP);
-
         controller.showAllStatus();
 
-        System.out.println("--- Testing Overweight ---");
+        System.out.println("--- Inside buttons: open, close, floor ---");
+        controller.pressCloseDoor("E1");
         controller.requestFromInside("E1", 2);
         controller.pressCloseDoor("E1");
 
+        controller.pressCloseDoor("E2");
         controller.requestFromInside("E2", 1);
         controller.pressCloseDoor("E2");
         controller.showAllStatus();
 
-        System.out.println("--- Testing Emergency Stop ---");
+        System.out.println("--- Emergency Stop (E1) ---");
         controller.pressEmergency("E1");
         controller.showAllStatus();
 
-        System.out.println("--- Testing Alarm Button ---");
+        System.out.println("--- Alarm Button (E2) ---");
         controller.pressAlarm("E2");
         controller.showAllStatus();
 
@@ -49,6 +52,13 @@ public class Main {
         controller.setElevatorMaintenance("E1", true);
         controller.requestFromOutside(2, Direction.DOWN);
 
+        controller.showAllStatus();
+
+        System.out.println("========== SWITCHING TO FCFS STRATEGY ==========");
+        controller.setStrategy(fcfs);
+
+        controller.setElevatorMaintenance("E1", false);
+        controller.requestFromOutside(3, Direction.UP);
         controller.showAllStatus();
     }
 }

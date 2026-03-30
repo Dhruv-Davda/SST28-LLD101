@@ -4,51 +4,69 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class BookingService {
-    private PricingStrategy pricingStrategy;
+    private PricingEngine pricingEngine;
     private RefundStrategy refundStrategy;
     private List<MovieTicket> allBookings;
 
-    public BookingService(PricingStrategy pricingStrategy, RefundStrategy refundStrategy) {
-        this.pricingStrategy = pricingStrategy;
+    public BookingService(PricingEngine pricingEngine, RefundStrategy refundStrategy) {
+        this.pricingEngine = pricingEngine;
         this.refundStrategy = refundStrategy;
         this.allBookings = new ArrayList<>();
     }
 
-    public MovieTicket bookTickets(Show show, List<String> seatIds) {
-        List<Seat> availableSeats = show.getAvailableSeats();
-        List<Seat> requestedSeats = new ArrayList<>();
+    public List<Seat> viewSeats(Show show) {
+        return show.getSeatsForDisplay();
+    }
 
-        for (String seatId : seatIds) {
-            boolean found = false;
-            for (Seat s : availableSeats) {
-                if (s.getSeatId().equals(seatId)) {
-                    requestedSeats.add(s);
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                System.out.println("Seat " + seatId + " is not available.");
-                return null;
-            }
-        }
-
-        boolean locked = show.bookSeats(seatIds);
+    public boolean selectSeats(Show show, List<String> seatIds) {
+        boolean locked = show.lockSeats(seatIds);
         if (!locked) {
-            System.out.println("Booking failed — seats already taken (concurrent booking).");
-            return null;
+            System.out.println("Some seats are not available (already locked or booked).");
+            return false;
+        }
+        System.out.println("Seats locked for payment: " + seatIds);
+        return true;
+    }
+
+    public MovieTicket pay(Show show, User user, List<String> seatIds, PaymentProcessor processor) {
+        List<Seat> selectedSeats = new ArrayList<>();
+        for (Seat s : show.getScreen().getSeats()) {
+            if (seatIds.contains(s.getSeatId())) {
+                selectedSeats.add(s);
+            }
         }
 
         double totalPrice = 0;
-        for (Seat s : requestedSeats) {
-            totalPrice += pricingStrategy.getPrice(s.getType());
+        for (Seat s : selectedSeats) {
+            totalPrice += pricingEngine.calculatePrice(show, s);
         }
 
-        MovieTicket ticket = new MovieTicket(show, requestedSeats, totalPrice);
+        boolean paid = processor.pay(totalPrice);
+        if (!paid) {
+            System.out.println("Payment failed. Releasing seats.");
+            show.releaseLock(seatIds);
+            return null;
+        }
+
+        boolean confirmed = show.confirmBooking(seatIds);
+        if (!confirmed) {
+            System.out.println("Booking failed — lock expired. Refunding.");
+            processor.refund(totalPrice);
+            return null;
+        }
+
+        MovieTicket ticket = new MovieTicket(show, user, selectedSeats, totalPrice, processor);
         allBookings.add(ticket);
         System.out.println("Booking confirmed! Ticket: " + ticket.getTicketId() +
-                " | Seats: " + requestedSeats + " | Total: Rs." + totalPrice);
+                " | Movie: " + show.getMovie().getName() +
+                " | Seats: " + selectedSeats + " | Total: Rs." + totalPrice);
         return ticket;
+    }
+
+    public MovieTicket bookTickets(Show show, User user, List<String> seatIds, PaymentProcessor processor) {
+        boolean locked = selectSeats(show, seatIds);
+        if (!locked) return null;
+        return pay(show, user, seatIds, processor);
     }
 
     public double cancelTicket(MovieTicket ticket) {
@@ -66,7 +84,9 @@ public class BookingService {
         ticket.getShow().releaseSeats(seatIds);
 
         double refund = refundStrategy.calculateRefund(ticket.getTotalPrice());
-        System.out.println("Ticket " + ticket.getTicketId() + " cancelled. Refund: Rs." + refund);
+        ticket.getPaymentProcessor().refund(refund);
+        System.out.println("Ticket " + ticket.getTicketId() + " cancelled. Refund: Rs." + refund +
+                " via " + ticket.getPaymentProcessor().getMode());
         return refund;
     }
 }

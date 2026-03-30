@@ -1,5 +1,5 @@
 package movie_ticket_booking;
 
 public enum SeatType {
-    REGULAR, PREMIUM, VIP
+    BRONZE, SILVER, GOLD, DIAMOND
 }

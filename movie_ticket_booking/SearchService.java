@@ -6,20 +6,24 @@ import java.util.List;
 public class SearchService {
     private List<Theatre> allTheatres;
     private List<Show> allShows;
+    private List<Movie> allMovies;
 
     public SearchService() {
         this.allTheatres = new ArrayList<>();
         this.allShows = new ArrayList<>();
+        this.allMovies = new ArrayList<>();
     }
 
     public void addTheatre(Theatre theatre) {
         allTheatres.add(theatre);
     }
 
+    public synchronized void addMovie(Movie movie) {
+        allMovies.add(movie);
+    }
+
     public synchronized void addShow(Show show) {
         allShows.add(show);
-        System.out.println("Show added: " + show.getShowId() + " | " + show.getMovie().getName() +
-                " at " + show.getTheatre().getName() + " (" + show.getStartTime() + ")");
     }
 
     public List<Theatre> showTheatres(String city) {
@@ -52,6 +56,16 @@ public class SearchService {
         for (Show show : allShows) {
             if (show.getMovie().getMovieId().equals(movieId) &&
                     show.getTheatre().getCity().equalsIgnoreCase(city)) {
+                result.add(show);
+            }
+        }
+        return result;
+    }
+
+    public List<Show> getShowsForTheatre(String theatreId) {
+        List<Show> result = new ArrayList<>();
+        for (Show show : allShows) {
+            if (show.getTheatre().getTheatreId().equals(theatreId)) {
                 result.add(show);
             }
         }
